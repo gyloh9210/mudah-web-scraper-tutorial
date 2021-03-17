@@ -27,7 +27,7 @@ const json2csv = require("json2csv");
 
     const postLinks = await page.evaluate(() => {
         let data = [];
-        const postTitle = document.querySelectorAll("#__next > div.mw13.mw4 > div.sc-htoDjs.ktvtLN > div.sc-dnqmqq.dgFJPO > div > div:nth-child(1) > div a");
+        const postTitle = document.querySelectorAll("#__next > div.mw13.mw4 > div:nth-child(5) > div:first-child > div > div:nth-child(1) > div a");
 
         // Extract url and name from each category selector
         postTitle.forEach(element => {
