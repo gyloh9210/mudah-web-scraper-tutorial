@@ -1,58 +1,61 @@
-const vanillaPuppeteer = require('puppeteer');
+const vanillaPuppeteer = require("puppeteer");
 const {
     addExtra
-} = require('puppeteer-extra');
+} = require("puppeteer-extra");
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
-const AdblockerPlugin = require("puppeteer-extra-plugin-adblocker");
+const AdblockerPlugin = require('puppeteer-extra-plugin-adblocker');
 const fs = require("fs");
 const json2csv = require("json2csv");
 
 (async () => {
-    const puppeteer = addExtra(vanillaPuppeteer)
+    const puppeteer = addExtra(vanillaPuppeteer);
 
-    puppeteer.use(StealthPlugin())
-    puppeteer.use(AdblockerPlugin())
+    puppeteer.use(StealthPlugin());
+    puppeteer.use(AdblockerPlugin());
 
     const browser = await puppeteer.launch({
         executablePath: 'C:/REPLACE/YOUR_LOCAL_PATH/node_modules/puppeteer/.local-chromium/win64-856583/chrome-win/chrome.exe',
-        args: ['--no-sandbox'],
         headless: true
     });
 
     const page = await browser.newPage();
 
     await page.goto("https://www.mudah.my/malaysia/cars-for-sale", {
-        waitUntil: 'networkidle0'
+        waitUntil: "networkidle0"
     });
 
     const postLinks = await page.evaluate(() => {
         let data = [];
         const postTitle = document.querySelectorAll("#__next > div.mw13.mw4 > div:nth-child(5) > div:first-child > div > div:nth-child(1) > div a");
 
-        // Extract url and name from each category selector
+        // Extract url and name from each post
         postTitle.forEach(element => {
             data.push(element.href);
-        });
+        })
 
         return data;
-    });
+    })
 
     const posts = [];
 
     // Extract detail 
     for (link of postLinks) {
         await page.goto(link, {
-            waitUntil: 'networkidle0'
+            waitUntil: "networkidle0"
         });
 
+        console.log("Scraping: ", link);
+
         const extractedData = await page.evaluate(() => {
-            const descriptionElement = document.querySelector("#__next > div:nth-child(7) > div:nth-child(1) > div:nth-child(1) > div:nth-child(3) > ul:nth-child(2) > li:nth-child(1) > div:nth-child(1) > div:nth-child(1)");
+            const detailBox = "#__next > div:nth-child(7) > div:nth-child(1)";
 
-            const titleElement = document.querySelector("#__next > div:nth-child(7) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > h1")
+            const descriptionElement = document.querySelector(detailBox + " > div:nth-child(1) > div:nth-child(3) > ul:nth-child(2) > li:nth-child(1) > div:nth-child(1) > div:nth-child(1)");
 
-            const priceElement = document.querySelector("#__next > div:nth-child(7) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > meta:nth-child(2)");
+            const titleElement = document.querySelector(detailBox + " > div:nth-child(1) > div:nth-child(1) > div:nth-child(1) > h1");
 
-            const locationElement = document.querySelector("#__next > div:nth-child(7) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2)")
+            const priceElement = document.querySelector(detailBox + " > div:nth-child(2) > div:nth-child(1) > div:nth-child(1) > div:nth-child(2) > div:nth-child(1) > meta:nth-child(2)");
+
+            const locationElement = document.querySelector(detailBox + " > div:nth-child(2) > div:nth-child(1) > div:nth-child(2) > div:nth-child(2)");
 
             return {
                 title: titleElement ? titleElement.innerHTML : null,
@@ -60,7 +63,7 @@ const json2csv = require("json2csv");
                 price: priceElement ? priceElement.getAttribute("content") : null,
                 location: locationElement ? locationElement.innerHTML : null
             };
-        });
+        })
 
         posts.push({
             url: link,
@@ -68,19 +71,17 @@ const json2csv = require("json2csv");
             title: extractedData.title,
             price: extractedData.price,
             location: extractedData.location
-        })
+        });
     }
 
-    json2csv
-        .parseAsync(posts, {
-            fields: ['url', 'description', 'title', 'price', 'location']
-        })
-        .then(csv => {
-            fs.writeFile('posts.csv', csv, function (err) {
-                if (err) throw err;
-                console.log('Done!');
-            });
-        })
+    json2csv.parseAsync(posts, {
+        fields: ['url', 'description', 'title', 'price', 'location']
+    }).then(csv => {
+        fs.writeFile('posts.csv', csv, function (err) {
+            if (err) throw err;
+            console.log("Done!");
+        });
+    })
 
     await browser.close();
-})()
+})();
